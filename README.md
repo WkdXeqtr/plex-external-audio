@@ -137,6 +137,28 @@ The pieces that would need writing are small and well isolated.
 - Files Plex has not analysed yet are skipped and picked up on the next run.
 - The installer is unsigned, so SmartScreen will call it an unknown publisher.
 
+## Code signing policy
+
+**Team roles.**
+This is a one-person project, so one person holds all three roles: [WkdXeqtr](https://github.com/WkdXeqtr) is the only author with commit access, the only reviewer of changes proposed from outside, and the only person who may approve a release for signing.
+Should anyone else join, this section is updated before they are given access.
+
+**Accounts.**
+Multi-factor authentication is required on every account that can reach the source or raise a signing request.
+
+**Where the binaries come from.**
+Released binaries are never built on a developer's machine.
+Every release is produced by the `release` workflow in this repository, on a GitHub-hosted runner, from the source at the tag that triggered it.
+The run is public and its log is kept, and a SHA-256 checksum of the installer is published beside it.
+
+**No upstream to review.**
+This is not a fork.
+It carries no third-party code beyond its Go dependencies, which are pinned in `go.sum`.
+
+**What the program sends.**
+Nothing.
+It reads the local Plex database and the audio files you already have, and speaks to no network service: there is no telemetry, no update check, no analytics.
+
 ## Credit and licence
 
 The approach - mapping external files into `media_streams` and wrapping the transcoder - was first worked out by [Saoneth/plex-custom-audio](https://github.com/Saoneth/plex-custom-audio), which has been unmaintained since 2021.
