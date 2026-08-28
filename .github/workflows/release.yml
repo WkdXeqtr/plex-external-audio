@@ -1,0 +1,99 @@
+# Builds the installer and publishes it as a release.
+#
+# Triggered by pushing a tag: git tag v1.0.1 && git push origin v1.0.1. The tag
+# is the single source of the version number - it is stamped into all four
+# binaries and into the installer, so a downloaded build can always say which
+# tag it came from.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build, for example v1.0.1'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Work out the version
+        id: version
+        shell: pwsh
+        run: |
+          $v = if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            '${{ github.event.inputs.version }}'
+          } else {
+            '${{ github.ref_name }}'
+          }
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "building $v"
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Install go-winres
+        run: go install github.com/tc-hib/go-winres@latest
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build binaries and installer
+        shell: pwsh
+        run: |
+          ./setup/build.ps1 -Installer `
+            -Version '${{ steps.version.outputs.version }}' `
+            -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+
+      - name: Guard regression suite
+        run: python guardtest/run.py
+
+      # A checksum is the only thing a downloader can check on an unsigned
+      # build, so it is worth publishing next to the installer.
+      - name: Checksum
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem installer/Output/*.exe | Select-Object -First 1
+          $h = (Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA256).Hash
+          "$h  $($exe.Name)" | Out-File -Encoding ascii installer/Output/SHA256SUMS.txt
+          Write-Host "$h  $($exe.Name)"
+
+      - name: Publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = '${{ steps.version.outputs.version }}'
+          $notes = @"
+Install by running the ``.exe``. One UAC prompt and it is done.
+
+**ffmpeg has to be installed already** - the program needs ``ffprobe`` to read
+your audio files. If it cannot find one, the installer says so and points at the
+setting to fill in.
+
+The build is unsigned, so SmartScreen will call it an unknown publisher. Check
+``SHA256SUMS.txt`` against the file if you want to be sure of what you
+downloaded; it was built by GitHub Actions from the source in this tag, and the
+run is public.
+"@
+          gh release create $v `
+            (Get-ChildItem installer/Output/*.exe).FullName `
+            installer/Output/SHA256SUMS.txt `
+            --title "Plex External Audio $v" `
+            --notes $notes

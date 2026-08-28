@@ -1,0 +1,53 @@
+# Builds and tests every push, so a broken commit is obvious before anyone
+# tries to cut a release from it.
+name: build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+      # go-winres turns the icon and the version info into the .syso files that
+      # go build links in. Without it the binaries come out nameless in Task
+      # Manager and in the installer's dialogs.
+      - name: Install go-winres
+        run: go install github.com/tc-hib/go-winres@latest
+
+      - name: Build
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File setup/build.ps1
+
+      # The guard is allowed to delete files in the Plex directory, and it once
+      # deleted the real transcoder. This suite drives it through the five
+      # scenarios that matter inside a fake Plex directory, and it is the reason
+      # that particular mistake cannot come back unnoticed.
+      - name: Guard regression suite
+        run: python guardtest/run.py
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: bin/*.exe
+          retention-days: 14

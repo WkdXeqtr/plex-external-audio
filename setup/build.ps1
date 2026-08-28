@@ -27,9 +27,15 @@
 #>
 [CmdletBinding()]
 param(
+    # A local toolchain when there is one; anything on PATH otherwise, which is
+    # what the GitHub Actions runner gives us.
     [string] $GoRoot    = 'C:\Users\horro\Desktop\Claude\go-toolchain\go',
     [switch] $Installer,
-    [string] $Iscc      = 'C:\Users\horro\Desktop\Claude\inno-tools\is6\ISCC.exe'
+    [string] $Iscc      = 'C:\Users\horro\Desktop\Claude\inno-tools\is6\ISCC.exe',
+    # Stamped into every binary and into the installer. The release workflow
+    # passes the tag it was triggered by, so a published build says which one it
+    # came from rather than always claiming to be the first.
+    [string] $Version   = '1.0.0'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,7 +45,7 @@ $binDir  = Join-Path $repo 'bin'
 $iconIco = Join-Path $repo 'installer\icon.ico'
 
 $productName = 'Plex External Audio'
-$version     = '1.0.0'
+$version     = $Version -replace '^v', ''
 
 function Say($t, $c = 'Gray') { Write-Host $t -ForegroundColor $c }
 
@@ -144,7 +150,11 @@ if ($Installer) {
     $iss = Join-Path $repo 'installer\plex-external-audio.iss'
     Say ''
     Say '  compiling the installer...'
-    & $Iscc $iss | Where-Object { $_ -match 'Successful|error|Error' } | ForEach-Object { Say "  $_" }
+    # The version reaches the script as a preprocessor define, so one number in
+    # one place ends up on the binaries, in the installer and in the entry under
+    # Apps and features.
+    & $Iscc "/DAppVersion=$version" $iss |
+        Where-Object { $_ -match 'Successful|error|Error' } | ForEach-Object { Say "  $_" }
     if ($LASTEXITCODE -ne 0) { throw 'ISCC failed' }
 
     $setup = Get-ChildItem (Join-Path $repo 'installer\Output') -Filter '*.exe' |

@@ -14,7 +14,11 @@
 ; and without the BOM Inno reads them in the system codepage and mangles them.
 
 #define AppName "Plex External Audio"
-#define AppVersion "1.0.0"
+; The release workflow passes /DAppVersion=<tag>; this is only the fallback for
+; a build started by hand.
+#ifndef AppVersion
+  #define AppVersion "1.0.0"
+#endif
 #define AppPublisher "Plex External Audio"
 #define AppURL "https://github.com/"
 
