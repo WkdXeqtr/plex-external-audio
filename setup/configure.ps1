@@ -151,6 +151,15 @@ if ($Uninstall) {
 # ===========================================================================
 Say '=== configuring ===' Cyan
 
+# A transcode in progress holds Plex Transcoder.exe open, and the swap below
+# would then fail on a locked file - halfway through an install, with the
+# original already moved aside. Ending it costs somebody one interrupted
+# playback, which is the cheaper of the two outcomes by a wide margin.
+foreach ($n in 'Plex Transcoder', 'Plex Transcoder_org') {
+    Get-Process -Name $n -ErrorAction SilentlyContinue |
+        Stop-Process -Force -ErrorAction SilentlyContinue
+}
+
 # 1. Swap the transcoder. If ours is already live there is nothing to do - and
 #    crucially nothing to park, or we would park our own wrapper on top of the
 #    saved original.

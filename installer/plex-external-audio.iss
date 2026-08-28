@@ -49,6 +49,16 @@ VersionInfoVersion={#AppVersion}
 VersionInfoProductName={#AppName}
 VersionInfoDescription=External audio tracks for Plex
 
+; Inno closes running programs through Restart Manager, which finds them by
+; broadcasting to top-level windows. Our tray icon does not have one: it owns a
+; message-only window, and message-only windows are deliberately excluded from
+; those broadcasts. So the offer to "close the applications automatically"
+; could never work, and the user was left staring at a dialog that failed no
+; matter which button was pressed. We shut the programs down ourselves in
+; PrepareToInstall instead, where we can simply end the processes by name.
+CloseApplications=no
+RestartApplications=no
+
 [Languages]
 ; The tray icon itself speaks one more language than this list: Chinese
 ; (Simplified). Inno does not ship a translation for it, so the installer falls
@@ -115,6 +125,42 @@ Type: files;          Name: "{app}\config.json"
 Type: files;          Name: "{app}\guard-early.log"
 
 [Code]
+
+// stopOurs ends one of our programs by image name, if it is running.
+//
+// taskkill rather than Restart Manager: see the note on CloseApplications above.
+// /T takes the children with it - the tray can have a mapper running under it,
+// and that mapper holds the Plex database open.
+procedure stopOurs(const ExeName: String);
+var
+  ResultCode: Integer;
+begin
+  Exec(ExpandConstant('{sys}\taskkill.exe'),
+       '/F /T /IM "' + ExeName + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
+// PrepareToInstall runs before a single file is copied, which is exactly when
+// the running copy has to be out of the way: Windows will not let us overwrite
+// an executable that is still running, and the failure surfaces as an
+// unexplained "cannot create file" halfway through the install.
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := '';
+
+  stopOurs('Plex External Audio Tray.exe');
+  stopOurs('Plex External Audio Guard.exe');
+  stopOurs('Plex External Audio Mapper.exe');
+  // Older installs carried different names; an upgrade from one of those would
+  // otherwise leave its tray icon running and holding the directory.
+  stopOurs('pca-tray.exe');
+  stopOurs('pca-guard.exe');
+
+  // Ending a process is asynchronous - the handles it holds are released a
+  // moment later, and copying over the file too early fails for no visible
+  // reason.
+  Sleep(800);
+end;
+
 // Undoing the system configuration is driven from here rather than from an
 // [UninstallRun] entry, because Inno expands the parameters of [UninstallRun]
 // at INSTALL time, when it records them into the uninstall log. The user's

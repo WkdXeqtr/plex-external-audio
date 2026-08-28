@@ -72,15 +72,19 @@ New-Item -ItemType Directory -Force -Path $binDir | Out-Null
 # --- what to build ---------------------------------------------------------
 # manifest: "gui" for the two that must never flash a console window,
 #           "cli" for the two that are console programs by nature.
+# FileDescription is a NAME, not a job description. Windows shows it in the
+# Description column of Task Manager, and Inno Setup shows it when it has to ask
+# the user about a running program - where a sentence like "Tray icon: status,
+# checks and settings" reads as gibberish and never says which program it is.
 $targets = @(
     @{ Pkg = './cmd/mapper';     Exe = "$productName Mapper.exe";     Gui = $false
-       Desc = 'Writes external audio tracks into the Plex database' },
+       Desc = "$productName Mapper" },
     @{ Pkg = './cmd/transcoder'; Exe = "$productName Transcoder.exe"; Gui = $false
-       Desc = 'Transcoder wrapper that feeds Plex the external audio file' },
+       Desc = "$productName Transcoder" },
     @{ Pkg = './cmd/guard';      Exe = "$productName Guard.exe";      Gui = $true
-       Desc = 'Restores the wrapper and the tracks after Plex updates' },
+       Desc = "$productName Guard" },
     @{ Pkg = './cmd/tray';       Exe = "$productName Tray.exe";       Gui = $true
-       Desc = 'Tray icon: status, checks and settings' }
+       Desc = $productName }
 )
 
 Push-Location $repo
