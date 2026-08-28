@@ -119,6 +119,7 @@ func (p Prober) Check() error {
 	// Stdin is deliberately left closed: a wrong binary that expects
 	// input then reaches end of file and gives up quickly.
 	command := exec.CommandContext(ctx, executable, "-version")
+	hideConsole(command)
 	var output bytes.Buffer
 	command.Stdout = &output
 	command.Stderr = &output
@@ -173,6 +174,7 @@ func (p Prober) One(ctx context.Context, path string) ([]Stream, error) {
 	// whatever is left on stderr is a genuine complaint about the file.
 	command := exec.CommandContext(ctx, p.executable(),
 		"-v", "error", "-show_streams", "-of", "json", path)
+	hideConsole(command)
 	var stdout bytes.Buffer
 	stderr := &cappedBuffer{limit: stderrLimit}
 	command.Stdout = &stdout
