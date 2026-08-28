@@ -74,26 +74,18 @@ jobs:
           "$h  $($exe.Name)" | Out-File -Encoding ascii installer/Output/SHA256SUMS.txt
           Write-Host "$h  $($exe.Name)"
 
+      # The notes live in a file rather than inline. A PowerShell here-string
+      # cannot be used here at all: its closing "@ has to sit in column zero,
+      # and column zero is exactly what ends a YAML block scalar, so the two
+      # requirements contradict each other and the workflow will not parse.
       - name: Publish the release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $v = '${{ steps.version.outputs.version }}'
-          $notes = @"
-Install by running the ``.exe``. One UAC prompt and it is done.
-
-**ffmpeg has to be installed already** - the program needs ``ffprobe`` to read
-your audio files. If it cannot find one, the installer says so and points at the
-setting to fill in.
-
-The build is unsigned, so SmartScreen will call it an unknown publisher. Check
-``SHA256SUMS.txt`` against the file if you want to be sure of what you
-downloaded; it was built by GitHub Actions from the source in this tag, and the
-run is public.
-"@
           gh release create $v `
             (Get-ChildItem installer/Output/*.exe).FullName `
             installer/Output/SHA256SUMS.txt `
             --title "Plex External Audio $v" `
-            --notes $notes
+            --notes-file .github/release-notes.md
