@@ -1,0 +1,42 @@
+{
+  "_comment": "Source language. Every other locale file must have exactly these keys. Placeholders (%d, %s) must be kept, in the same order. Do not translate the product name 'Plex External Audio'.",
+
+  "tip.ok": "Working, tracks: %d",
+  "tip.bad": "Wrapper is not installed",
+
+  "menu.head.ok": "Working, tracks: %d",
+  "menu.head.bad": "Wrapper is not installed",
+  "menu.check": "Check now",
+  "menu.check.busy": "Checking...",
+  "menu.settings": "Settings",
+  "menu.interval": "Check interval",
+  "menu.interval.item": "%d min",
+  "menu.notify": "Notify about repairs",
+  "menu.autostart": "Start at sign-in",
+  "menu.language": "Language",
+  "menu.language.auto": "Same as Windows",
+  "menu.openlog": "Open log",
+  "menu.openfolder": "Open program folder",
+  "menu.tasks.on": "Auto-check: enabled",
+  "menu.tasks.disable": "Disable auto-check",
+  "menu.tasks.enable": "Enable auto-check",
+  "menu.uninstall": "Uninstall...",
+  "menu.exit": "Exit",
+
+  "notify.tasks.enabled": "Auto-check enabled",
+  "notify.tasks.disabled": "Auto-check disabled",
+  "notify.busy": "A check is already running...",
+  "notify.checking": "Checking...",
+  "notify.nowrapper": "The wrapper is missing - reinstall the program",
+  "notify.ok": "All good, tracks: %d",
+  "notify.filling": "Setting up tracks, this takes a couple of minutes...",
+  "notify.done": "Done, tracks: %d",
+
+  "uninstall.title": "%s",
+  "uninstall.notfound": "The uninstaller was not found.\n\nRemove the program through Windows Settings, in Apps and features.",
+
+  "exit.title": "%s",
+  "exit.busy": "A library check is running right now. If you quit, it will be interrupted and Plex may be left shut down.\n\nQuit anyway?",
+
+  "lang.name": "English"
+}

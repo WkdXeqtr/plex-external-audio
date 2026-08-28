@@ -1,0 +1,7 @@
+bin/
+installer/Output/
+guardtest/state/
+guardtest/plexdir/
+guardtest/config.json
+guardtest/fake.db
+*.log

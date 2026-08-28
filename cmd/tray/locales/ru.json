@@ -1,0 +1,40 @@
+{
+  "tip.ok": "Работает, дорожек: %d",
+  "tip.bad": "Прослойка не установлена",
+
+  "menu.head.ok": "Работает, дорожек: %d",
+  "menu.head.bad": "Прослойка не установлена",
+  "menu.check": "Проверить",
+  "menu.check.busy": "Проверка идёт...",
+  "menu.settings": "Настройки",
+  "menu.interval": "Интервал проверки",
+  "menu.interval.item": "%d мин",
+  "menu.notify": "Уведомлять о починке",
+  "menu.autostart": "Запускать при входе",
+  "menu.language": "Язык",
+  "menu.language.auto": "Как в Windows",
+  "menu.openlog": "Открыть лог",
+  "menu.openfolder": "Открыть папку программы",
+  "menu.tasks.on": "Автопроверка: включена",
+  "menu.tasks.disable": "Автопроверку отключить",
+  "menu.tasks.enable": "Автопроверку включить",
+  "menu.uninstall": "Удалить программу...",
+  "menu.exit": "Выход",
+
+  "notify.tasks.enabled": "Автопроверка включена",
+  "notify.tasks.disabled": "Автопроверка отключена",
+  "notify.busy": "Проверка уже идёт...",
+  "notify.checking": "Проверяю...",
+  "notify.nowrapper": "Прослойки нет - переустановите программу",
+  "notify.ok": "Всё в порядке, дорожек: %d",
+  "notify.filling": "Настраиваю дорожки, это займёт пару минут...",
+  "notify.done": "Готово, дорожек: %d",
+
+  "uninstall.title": "%s",
+  "uninstall.notfound": "Деинсталлятор не найден.\n\nУдалите программу через параметры Windows, раздел «Приложения и возможности».",
+
+  "exit.title": "%s",
+  "exit.busy": "Сейчас идёт проверка библиотеки. Если выйти, она прервётся, а Plex может остаться выключенным.\n\nВсё равно выйти?",
+
+  "lang.name": "Русский"
+}
