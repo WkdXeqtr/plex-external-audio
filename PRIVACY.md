@@ -32,5 +32,10 @@ Uninstalling removes the settings; the logs are left behind on purpose, since th
 
 ## The installer
 
-The installer contacts nothing either.
-It looks for Plex and for `ffprobe` on your own disk and in your own registry.
+The installer looks for Plex and for `ffprobe` on your own disk and in your own registry.
+
+It makes exactly one network request, and only when your machine has no `ffprobe` at all: it downloads a published build of ffmpeg, takes `ffprobe.exe` out of it and throws the rest away.
+The sources are [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds/releases) on GitHub, and [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) if the first cannot be reached.
+Nothing about you is sent with that request beyond what any download involves, and if it fails the installation carries on without it.
+
+It contacts nothing else, ever.

@@ -22,7 +22,7 @@ Tested on Plex 1.43.3, Windows 11: 2247 external tracks across a library of 5212
 
 Run the installer.
 One UAC prompt and it is done - it finds Plex, the database and ffprobe by itself, swaps in the transcoder wrapper and puts a tray icon in place.
-**ffmpeg must already be installed**; if ffprobe is missing the installer says so and points at the field to fill in.
+It needs `ffprobe`, part of ffmpeg, to read your audio files; if your machine has none, the installer downloads one and keeps just that single file.
 
 Uninstalling is the normal Windows way: Apps and features, or Uninstall in the tray menu.
 Both restore the original Plex transcoder and offer to clear the tracks out of the database.

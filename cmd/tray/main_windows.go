@@ -335,10 +335,11 @@ func main() {
 		return
 	}
 
-	setAppID(appID)
-
 	exe, _ := os.Executable()
 	a := &app{dest: filepath.Dir(exe)}
+
+	setAppID(appID)
+	registerAppID(a.dest)
 
 	// the config sits next to the exe in the install directory
 	if b, err := os.ReadFile(filepath.Join(a.dest, "config.json")); err == nil {

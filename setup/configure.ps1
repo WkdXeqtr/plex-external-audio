@@ -29,7 +29,10 @@
 param(
     [Parameter(Mandatory)] [string] $Dest,
     [switch] $Uninstall,
-    [switch] $CleanDb
+    [switch] $CleanDb,
+    # An ffmpeg archive the installer downloaded, used only when the machine has
+    # no usable ffprobe of its own.
+    [string] $FfmpegZip
 )
 
 $ErrorActionPreference = 'Continue'
@@ -218,6 +221,40 @@ if (Test-Path $wingetRoot) {
 
 foreach ($c in $candidates) {
     if (Test-FfprobeOk $c) { $ffprobe = $c; break }
+}
+
+# Nothing usable on the machine, but the installer downloaded an archive. Take
+# the one file we need out of it rather than unpacking the lot: a full ffmpeg
+# build unpacks to the better part of two hundred megabytes, and every byte of
+# it except ffprobe.exe would sit there unused. Both builds we download put it
+# at <something>/bin/ffprobe.exe, so the entry is found by suffix.
+if (-not $ffprobe -and $FfmpegZip -and (Test-Path -LiteralPath $FfmpegZip)) {
+    Say '  unpacking ffprobe from the downloaded archive...'
+    try {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $zip = [System.IO.Compression.ZipFile]::OpenRead($FfmpegZip)
+        try {
+            $entry = $zip.Entries |
+                Where-Object { $_.FullName -match '(^|/)bin/ffprobe\.exe$' } |
+                Select-Object -First 1
+            if ($entry) {
+                $dir = Join-Path $Dest 'ffmpeg'
+                New-Item -ItemType Directory -Force -Path $dir | Out-Null
+                $out = Join-Path $dir 'ffprobe.exe'
+                [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $out, $true)
+                if (Test-FfprobeOk $out) {
+                    $ffprobe = $out
+                    Say ("  ffprobe installed ({0:N0} MB)" -f ((Get-Item $out).Length / 1MB)) Green
+                } else {
+                    Say '  the extracted ffprobe does not run' Yellow
+                }
+            } else {
+                Say '  no ffprobe.exe inside the archive' Yellow
+            }
+        } finally { $zip.Dispose() }
+    } catch {
+        Say ("  could not unpack ffprobe: " + $_.Exception.Message) Yellow
+    }
 }
 
 $cfg = [ordered]@{

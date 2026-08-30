@@ -80,6 +80,18 @@ Name: "tr";    MessagesFile: "compiler:Languages\Turkish.isl"
 Name: "ja";    MessagesFile: "compiler:Languages\Japanese.isl"
 
 [CustomMessages]
+en.FfmpegDownloadFailed=ffmpeg could not be downloaded, so installation will carry on without it.%n%nThe program needs ffprobe to read your audio files. Install ffmpeg yourself, then put the path to ffprobe.exe into config.json in the program folder.
+ru.FfmpegDownloadFailed=Не удалось скачать ffmpeg, установка продолжится без него.%n%nБез ffprobe программа не сможет читать звуковые файлы. Установите ffmpeg сами и впишите путь к ffprobe.exe в config.json в папке программы.
+uk.FfmpegDownloadFailed=Не вдалося завантажити ffmpeg, встановлення триватиме без нього.%n%nБез ffprobe програма не зможе читати звукові файли. Установіть ffmpeg самотужки та впишіть шлях до ffprobe.exe у config.json у теці програми.
+de.FfmpegDownloadFailed=ffmpeg konnte nicht heruntergeladen werden, die Installation wird ohne fortgesetzt.%n%nOhne ffprobe kann das Programm Ihre Audiodateien nicht lesen. Installieren Sie ffmpeg selbst und tragen Sie den Pfad zu ffprobe.exe in die config.json im Programmordner ein.
+fr.FfmpegDownloadFailed=Le téléchargement de ffmpeg a échoué, l'installation continuera sans lui.%n%nSans ffprobe, le programme ne peut pas lire vos fichiers audio. Installez ffmpeg vous-même, puis indiquez le chemin de ffprobe.exe dans config.json, dans le dossier du programme.
+es.FfmpegDownloadFailed=No se pudo descargar ffmpeg; la instalación continuará sin él.%n%nSin ffprobe el programa no puede leer sus archivos de audio. Instale ffmpeg usted mismo y escriba la ruta de ffprobe.exe en config.json, en la carpeta del programa.
+it.FfmpegDownloadFailed=Non è stato possibile scaricare ffmpeg, l'installazione proseguirà senza.%n%nSenza ffprobe il programma non può leggere i file audio. Installa ffmpeg manualmente e indica il percorso di ffprobe.exe in config.json nella cartella del programma.
+pl.FfmpegDownloadFailed=Nie udało się pobrać ffmpeg, instalacja będzie kontynuowana bez niego.%n%nBez ffprobe program nie odczyta plików dźwiękowych. Zainstaluj ffmpeg samodzielnie i wpisz ścieżkę do ffprobe.exe w config.json w folderze programu.
+pt.FfmpegDownloadFailed=Não foi possível baixar o ffmpeg; a instalação continuará sem ele.%n%nSem o ffprobe o programa não consegue ler seus arquivos de áudio. Instale o ffmpeg por conta própria e informe o caminho do ffprobe.exe no config.json, na pasta do programa.
+tr.FfmpegDownloadFailed=ffmpeg indirilemedi, kurulum onsuz devam edecek.%n%nffprobe olmadan program ses dosyalarınızı okuyamaz. ffmpeg'i kendiniz kurun ve ffprobe.exe yolunu program klasöründeki config.json dosyasına yazın.
+ja.FfmpegDownloadFailed=ffmpeg をダウンロードできませんでした。インストールはこのまま続行します。%n%nffprobe がないと音声ファイルを読み取れません。ffmpeg をご自身でインストールし、プログラムフォルダーの config.json に ffprobe.exe のパスを記入してください。
+
 en.CleanDbQuestion=Also remove the external audio tracks from the Plex database?%n%nYour audio files on disk are not touched - the tracks will simply stop appearing in the list in Plex.
 ru.CleanDbQuestion=Удалить из базы Plex записи о внешних дорожках?%n%nФайлы озвучек на диске не трогаются - дорожки просто исчезнут из списка в Plex.
 uk.CleanDbQuestion=Видалити з бази Plex записи про зовнішні доріжки?%n%nФайли озвучення на диску не змінюються - доріжки просто зникнуть зі списку в Plex.
@@ -107,7 +119,10 @@ Source: "..\setup\clean-slate.ps1"; DestDir: "{app}\setup"; Flags: ignoreversion
 Source: "..\setup\recover.ps1";     DestDir: "{app}\setup"; Flags: ignoreversion
 
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "icon.ico";     DestDir: "{app}"; Flags: ignoreversion
+Source: "icon.ico";       DestDir: "{app}"; Flags: ignoreversion
+; The notification centre reads its header icon from a plain bitmap, not from an
+; icon container, so the PNG ships alongside the .ico rather than instead of it.
+Source: "..\docs\icon.png"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; One shortcut in the Start menu - it is also what puts the program into
@@ -119,7 +134,7 @@ Name: "{group}\Plex External Audio"; Filename: "{app}\Plex External Audio Tray.e
 [Run]
 ; With rights already elevated: configure the system.
 Filename: "powershell.exe"; \
-  Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\setup\configure.ps1"" -Dest ""{app}"""; \
+  Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\setup\configure.ps1"" -Dest ""{app}""{code:FfmpegZipArg}"; \
   StatusMsg: "Swapping the transcoder, registering tasks, setting up autostart..."; \
   Flags: runhidden waituntilterminated
 
@@ -129,6 +144,104 @@ Type: files;          Name: "{app}\config.json"
 Type: files;          Name: "{app}\guard-early.log"
 
 [Code]
+
+var
+  DownloadPage: TDownloadWizardPage;
+  FfmpegZip: String;
+
+// ffprobe is not optional: without it nothing can read the audio files. Rather
+// than tell people to go and install ffmpeg first, fetch it here.
+//
+// It is downloaded rather than bundled on purpose. The published Windows builds
+// of ffmpeg are GPL, and shipping one inside an MIT installer would drag that
+// licence over this project. Downloading leaves the user getting ffmpeg from
+// its own publisher, with this installer only doing the fetching.
+// Two sources, tried in order. Neither is a mirror of the other, they are just
+// the two best known Windows builds - and having a second one matters: on the
+// machine this was developed on, Kaspersky refuses the gyan.dev download
+// outright with HTTP 499 and a signature match, while the GitHub-hosted one
+// goes through untouched.
+const
+  FfmpegUrl1 = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip';
+  FfmpegUrl2 = 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip';
+
+// TryDownload fetches one URL and says whether it worked.
+function TryDownload(Url: String): Boolean;
+begin
+  DownloadPage.Clear;
+  DownloadPage.Add(Url, 'ffmpeg.zip', '');
+  try
+    DownloadPage.Download;
+    Result := True;
+  except
+    Result := False;
+  end;
+end;
+
+// HaveFfprobe reports whether the machine already has one.
+//
+// Only presence is checked here; whether it is recent enough is decided later by
+// configure.ps1, which can actually run it and read the version.
+function HaveFfprobe(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  // on PATH
+  if Exec(ExpandConstant('{sys}\where.exe'), 'ffprobe.exe', '', SW_HIDE,
+          ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
+  begin
+    Result := True;
+    exit;
+  end;
+  // the usual places people unpack it to
+  Result := FileExists(ExpandConstant('{pf}\ffmpeg\bin\ffprobe.exe'))
+         or FileExists('C:\ffmpeg\bin\ffprobe.exe')
+         or FileExists('C:\ProgramData\chocolatey\bin\ffprobe.exe')
+         or FileExists(ExpandConstant('{app}\ffmpeg\ffprobe.exe'));
+end;
+
+procedure InitializeWizard();
+begin
+  DownloadPage := CreateDownloadPage(
+    SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), nil);
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := True;
+  if CurPageID <> wpReady then exit;
+  if HaveFfprobe() then exit;
+
+  // A failed download must not stop the install. Plenty of things get in the
+  // way - no connection, a corporate proxy, or an antivirus that blocks the
+  // file outright, which is not hypothetical: one refused it with HTTP 499
+  // during testing. Everything else still installs, and configure.ps1 says
+  // plainly what is missing and where to point it.
+  DownloadPage.Show;
+  try
+    if TryDownload(FfmpegUrl1) or TryDownload(FfmpegUrl2) then
+      FfmpegZip := ExpandConstant('{tmp}\ffmpeg.zip')
+    else
+    begin
+      FfmpegZip := '';
+      SuppressibleMsgBox(CustomMessage('FfmpegDownloadFailed'),
+        mbInformation, MB_OK, IDOK);
+    end;
+  finally
+    DownloadPage.Hide;
+  end;
+end;
+
+// FfmpegZipArg hands the downloaded archive to configure.ps1, which pulls the
+// single file we need out of it. Extracting the whole thing would put close to
+// two hundred megabytes on disk for the sake of one executable.
+function FfmpegZipArg(Param: String): String;
+begin
+  if FfmpegZip <> '' then
+    Result := ' -FfmpegZip "' + FfmpegZip + '"'
+  else
+    Result := '';
+end;
 
 // stopOurs ends one of our programs by image name, if it is running.
 //
