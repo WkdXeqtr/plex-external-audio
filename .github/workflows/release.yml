@@ -66,12 +66,20 @@ jobs:
 
       # A checksum is the only thing a downloader can check on an unsigned
       # build, so it is worth publishing next to the installer.
+      #
+      # Named after the file it belongs to rather than SHA256SUMS: there is only
+      # ever one artifact here, so a list is pointless, and the name then says
+      # by itself what it is a checksum of.
       - name: Checksum
+        id: checksum
         shell: pwsh
         run: |
           $exe = Get-ChildItem installer/Output/*.exe | Select-Object -First 1
           $h = (Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA256).Hash
-          "$h  $($exe.Name)" | Out-File -Encoding ascii installer/Output/SHA256SUMS.txt
+          $sums = Join-Path $exe.DirectoryName ($exe.Name + '.sha256')
+          "$h  $($exe.Name)" | Out-File -Encoding ascii $sums
+          "hash=$h"          | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "name=$($exe.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           Write-Host "$h  $($exe.Name)"
 
       # The notes live in a file rather than inline. A PowerShell here-string
@@ -84,8 +92,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $v = '${{ steps.version.outputs.version }}'
+          # The checksum also goes into the notes, so it can be compared against
+          # Get-FileHash without downloading a second file for one line of text.
+          $lines = @(
+            (Get-Content .github/release-notes.md -Raw).TrimEnd(),
+            '',
+            '## Checksum',
+            '',
+            ('SHA-256 of ' + '${{ steps.checksum.outputs.name }}' + ':'),
+            '',
+            ('    ' + '${{ steps.checksum.outputs.hash }}')
+          )
+          $notes = Join-Path $env:RUNNER_TEMP 'notes.md'
+          ($lines -join "`n") | Out-File -Encoding utf8 $notes
           gh release create $v `
             (Get-ChildItem installer/Output/*.exe).FullName `
-            installer/Output/SHA256SUMS.txt `
+            (Get-ChildItem installer/Output/*.sha256).FullName `
             --title "Plex External Audio $v" `
-            --notes-file .github/release-notes.md
+            --notes-file $notes
